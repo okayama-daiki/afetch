@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
-
-"""
-Configuration settings for afetch.
-"""
+"""Configuration settings for afetch."""
 
 from dataclasses import dataclass
 
 
 @dataclass
 class FetcherConfig:
-    """
-    Configuration for afetch.
+    """Configuration for afetch.
 
     Attributes:
         rate_limit_per_domain: Maximum requests per domain per time period.
@@ -18,6 +13,7 @@ class FetcherConfig:
         retry_attempts: Number of retry attempts for failed requests.
         retry_delay: Base delay in seconds between retry attempts.
         cache_enabled: Whether to enable response caching.
+
     """
 
     rate_limit_per_domain: int = 1
