@@ -37,11 +37,11 @@ async def wait_until_blocked[T](
     Increasing `max_wait_iter` reduces flakiness in CI environments, but it may also slow down tests.
     TODO: Replace with more robust synchronization mechanism if needed.
     """
-    iteration, done, pending = 0, set[asyncio.Task[T]](), set(tasks)
-    while iteration < max_wait_iter and len(done) < len(tasks):
+    iteration, pending = 0, set(tasks)
+    while iteration < max_wait_iter and len(pending) > 0:
         iteration += 1
-        done, pending = await asyncio.wait(
-            pending,
+        _, pending = await asyncio.wait(
+            pending,  # pyright: ignore[reportUnknownArgumentType]
             return_when=asyncio.FIRST_COMPLETED,
             timeout=0,
         )
@@ -90,7 +90,7 @@ async def test_fetcher_same_domain_rate_limiting(httpserver: HTTPServer) -> None
             expected_done_tasks += 1
             assert (
                 len(tasks) - len(pending) == expected_done_tasks
-            )  # First request is done soon
+            )  # First request is done immediately
 
             pending = await wait_until_blocked(pending)
             assert (
@@ -117,39 +117,29 @@ async def test_fetcher_same_domain_rate_limiting(httpserver: HTTPServer) -> None
             )  # Third request is done
 
 
-# @pytest.mark.asyncio
-# async def test_fetcher_different_domains_parallel() -> None:
-#     """Test that requests to different domains are executed in parallel.
+async def test_fetcher_different_domains_parallel(
+    httpserver: HTTPServer,
+    httpserver2: HTTPServer,
+    httpserver3: HTTPServer,
+) -> None:
+    """Test that requests to different domains are executed in parallel."""
+    urls = [
+        f"http://localhost:{httpserver.port}/page",
+        f"http://localhost:{httpserver2.port}/page",
+        f"http://localhost:{httpserver3.port}/page",
+    ]
+    for server, url in zip(
+        [httpserver, httpserver2, httpserver3],
+        urls,
+        strict=True,
+    ):
+        server.expect_request(_extract_path(url)).respond_with_data("test response")
 
-#     Verifies that requests to different domains use separate limiters so
-#     they can proceed in parallel, without relying on real time.
-#     """
-#     urls = [
-#         "http://example1.com/page",
-#         "http://example2.com/page",
-#         "http://example3.com/page",
-#     ]
-#     with mock.patch("afetch.fetcher.aiolimiter.AsyncLimiter") as mock_limiter_cls:
-#         # Each domain should get its own limiter instance
-#         limiters: list[mock.AsyncMock] = []
+    async with Fetcher() as fetcher:
+        tasks = [asyncio.Task(fetcher.fetch(url)) for url in urls]
 
-#         def _limiter_factory(*_: object, **__: object) -> mock.AsyncMock:  # pyright: ignore[reportUnknownParameterType]
-#             limiter = mock.AsyncMock()
-#             limiters.append(limiter)
-#             return limiter
-
-#         mock_limiter_cls.side_effect = _limiter_factory
-
-#         with aioresponses() as mocked:
-#             for url in urls:
-#                 mocked.get(url, status=200, body="test response", repeat=True)  # pyright: ignore[reportUnknownMemberType]
-#             async with Fetcher() as fetcher:
-#                 await fetcher.fetch_all(urls)
-
-#     # Different domains -> distinct limiter instances
-#     assert len(limiters) == len(urls)
-#     for limiter in limiters:
-#         assert limiter.__aenter__.call_count == 1
+        pending = await wait_until_blocked(tasks)
+        assert len(pending) == 0  # All requests are done immediately
 
 
 # @pytest.mark.asyncio
