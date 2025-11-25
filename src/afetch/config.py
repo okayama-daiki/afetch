@@ -16,8 +16,8 @@ class FetcherConfig:
 
     """
 
-    rate_limit_per_domain: int = 1
-    rate_limit_period: float = 1.0
+    max_rate_per_domain: int = 1
+    time_period_per_domain: float = 1
     retry_attempts: int = 3
     retry_delay: float = 1.0
     cache_enabled: bool = True

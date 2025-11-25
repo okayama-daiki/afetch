@@ -1,57 +1,120 @@
 """Tests for the afetch Fetcher class."""
 
+import asyncio
 import typing as t
+from unittest.mock import patch
+from urllib.parse import urlparse
 
-import pytest
-from aiohttp import ClientError, ClientResponseError
-from aioresponses import aioresponses
-
-from afetch import Fetcher, FetcherConfig
+from afetch import Fetcher
 
 if t.TYPE_CHECKING:
     from pytest_httpserver import HTTPServer
 
 
-def _extract_path(url: str) -> str:
-    """Helper to extract path from URL for HTTPServer expectations."""
-    from urllib.parse import urlparse
+class _MockLoopTime:
+    def __init__(self) -> None:
+        self.current_time = 0
+        event_loop = asyncio.get_running_loop()
+        self.patch = patch.object(event_loop, "time", self.mocked_time)
 
+    def mocked_time(self) -> int:
+        return self.current_time
+
+    def __enter__(self) -> t.Self:
+        self.patch.start()
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.patch.stop()
+
+
+async def wait_until_blocked[T](
+    tasks: t.Collection[asyncio.Task[T]],
+    max_wait_iter: int = 50,
+) -> set[asyncio.Task[T]]:
+    """Wait until all tasks are blocked and return the list of pending tasks.
+
+    Increasing `max_wait_iter` reduces flakiness in CI environments, but it may also slow down tests.
+    TODO: Replace with more robust synchronization mechanism if needed.
+    """
+    iteration, done, pending = 0, set[asyncio.Task[T]](), set(tasks)
+    while iteration < max_wait_iter and len(done) < len(tasks):
+        iteration += 1
+        done, pending = await asyncio.wait(
+            pending,
+            return_when=asyncio.FIRST_COMPLETED,
+            timeout=0,
+        )
+
+    return pending
+
+
+def _extract_path(url: str) -> str:
+    """Extract path from URL for HTTPServer expectations."""
     parsed = urlparse(url)
     return parsed.path
 
 
-# async def test_fetcher_single_fetch(httpserver: HTTPServer) -> None:
-#     """Test that a single fetch returns the expected content.
+async def test_fetcher_single_fetch(httpserver: HTTPServer) -> None:
+    """Test that a single fetch returns the expected content.
 
-#     Expects the response content to match the mocked value.
-#     """
-#     url = f"http://localhost:{httpserver.port}/page"
-#     httpserver.expect_request(_extract_path(url)).respond_with_data("test content")
+    Expects the response content to match the mocked value.
+    """
+    url = f"http://localhost:{httpserver.port}/page"
+    httpserver.expect_request(_extract_path(url)).respond_with_data("test content")
 
-#     async with Fetcher() as fetcher:
-#         content = await fetcher.fetch(url)
-#     assert content == "test content"
+    async with Fetcher() as fetcher:
+        content = await fetcher.fetch(url)
+    assert content == "test content"
 
 
 async def test_fetcher_same_domain_rate_limiting(httpserver: HTTPServer) -> None:
     """Test that requests to the same domain are rate-limited.
 
-    Verifies that rate limiting is applied per domain by ensuring the
-    limiter is entered once per request, without relying on real time.
+    Verifies that rate limiting is applied per domain.
     """
     urls = [
-        f"http://example.com:{httpserver.port}/page1",
-        # f"http://example.com:{httpserver.port}/page2",
-        # f"http://example.com:{httpserver.port}/page3",
+        f"http://localhost:{httpserver.port}/page1",
+        f"http://localhost:{httpserver.port}/page2",
+        f"http://localhost:{httpserver.port}/page3",
     ]
     for url in urls:
         httpserver.expect_request(_extract_path(url)).respond_with_data("test response")
 
-    async with Fetcher() as fetcher:
-        await fetcher.fetch_all(urls)
+    with _MockLoopTime() as mocked_time:
+        async with Fetcher() as fetcher:
+            tasks = [asyncio.Task(fetcher.fetch(url)) for url in urls]
+            expected_done_tasks = 0
 
-    # Same domain -> limiter __aenter__ should be called once per request
-    # assert mock_limiter.__aenter__.call_count == len(urls)
+            pending = await wait_until_blocked(tasks)
+            expected_done_tasks += 1
+            assert (
+                len(tasks) - len(pending) == expected_done_tasks
+            )  # First request is done soon
+
+            pending = await wait_until_blocked(pending)
+            assert (
+                len(tasks) - len(pending) == expected_done_tasks
+            )  # Second request waits due to rate limiting
+
+            mocked_time.current_time += 1
+            expected_done_tasks += 1
+            pending = await wait_until_blocked(pending)
+            assert (
+                len(tasks) - len(pending) == expected_done_tasks
+            )  # Second request is done
+
+            pending = await wait_until_blocked(pending)
+            assert (
+                len(tasks) - len(pending) == expected_done_tasks
+            )  # Third request waits due to rate limiting
+
+            mocked_time.current_time += 1
+            expected_done_tasks += 1
+            pending = await wait_until_blocked(pending)
+            assert (
+                len(tasks) - len(pending) == expected_done_tasks
+            )  # Third request is done
 
 
 # @pytest.mark.asyncio

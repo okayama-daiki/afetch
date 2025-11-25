@@ -40,8 +40,8 @@ class Fetcher:
         self.config = config or FetcherConfig()
         self._limiters: dict[str, aiolimiter.AsyncLimiter] = collections.defaultdict(
             lambda: aiolimiter.AsyncLimiter(
-                max_rate=self.config.rate_limit_per_domain,
-                time_period=self.config.rate_limit_period,
+                max_rate=self.config.max_rate_per_domain,
+                time_period=self.config.time_period_per_domain,
             ),
         )
         self._session: CachedSession | None = None
@@ -76,6 +76,7 @@ class Fetcher:
             limiter = self._limiters[domain]
             async with limiter:
                 pass
+
         async with self._client.get(url) as response:
             return await response.text()
 
@@ -99,7 +100,9 @@ class Fetcher:
         if not self._session or not self._client:
             msg = "Fetcher must be used as async context manager"
             raise RuntimeError(msg)
-        return await asyncio.gather(self.fetch(url) for url in urls)
+
+        tasks = [self.fetch(url) for url in urls]
+        return await asyncio.gather(*tasks)
 
     async def __aenter__(self) -> t.Self:
         """Enter the async context manager.
