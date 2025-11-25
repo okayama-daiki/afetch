@@ -7,7 +7,7 @@ from urllib.parse import urlparse
 
 from pytest_httpserver import RequestMatcher
 
-from afetch import Fetcher
+from afetch import Fetcher, FetcherConfig
 
 if t.TYPE_CHECKING:
     from pytest_httpserver import HTTPServer
@@ -31,7 +31,7 @@ class _MockLoopTime:
 
 
 async def wait_until_blocked[T](
-    tasks: t.Collection[asyncio.Task[T]],
+    *tasks: asyncio.Task[T],
     max_wait_iter: int = 100,
 ) -> set[asyncio.Task[T]]:
     """Wait until all tasks are blocked and return the list of pending tasks.
@@ -88,32 +88,32 @@ async def test_fetcher_same_domain_rate_limiting(httpserver: HTTPServer) -> None
             tasks = [asyncio.Task(fetcher.fetch(url)) for url in urls]
             expected_done_tasks = 0
 
-            pending = await wait_until_blocked(tasks)
+            pending = await wait_until_blocked(*tasks)
             expected_done_tasks += 1
             assert (
                 len(tasks) - len(pending) == expected_done_tasks
             )  # First request is done immediately
 
-            pending = await wait_until_blocked(pending)
+            pending = await wait_until_blocked(*pending)
             assert (
                 len(tasks) - len(pending) == expected_done_tasks
             )  # Second request waits due to rate limiting
 
             mocked_time.current_time += 1
             expected_done_tasks += 1
-            pending = await wait_until_blocked(pending)
+            pending = await wait_until_blocked(*pending)
             assert (
                 len(tasks) - len(pending) == expected_done_tasks
             )  # Second request is done
 
-            pending = await wait_until_blocked(pending)
+            pending = await wait_until_blocked(*pending)
             assert (
                 len(tasks) - len(pending) == expected_done_tasks
             )  # Third request waits due to rate limiting
 
             mocked_time.current_time += 1
             expected_done_tasks += 1
-            pending = await wait_until_blocked(pending)
+            pending = await wait_until_blocked(*pending)
             assert (
                 len(tasks) - len(pending) == expected_done_tasks
             )  # Third request is done
@@ -140,7 +140,7 @@ async def test_fetcher_different_domains_parallel(
     async with Fetcher() as fetcher:
         tasks = [asyncio.Task(fetcher.fetch(url)) for url in urls]
 
-        pending = await wait_until_blocked(tasks)
+        pending = await wait_until_blocked(*tasks)
         assert len(pending) == 0  # All requests are done immediately
 
 
@@ -164,6 +164,35 @@ async def test_fetcher_cached_requests(httpserver: HTTPServer) -> None:
         )
         == 1
     )  # Only the first request hits the server
+
+
+async def test_fetcher_retry_then_success(httpserver: HTTPServer) -> None:
+    """Test that retry succeeds after initial failures.
+
+    Expects the fetcher to retry and eventually succeed.
+    Also verifies timing for retry attempts.
+    """
+    url = f"http://localhost:{httpserver.port}/retry"
+    path = _extract_path(url)
+    config = FetcherConfig(retry_attempts=3, retry_delay=1.0)
+
+    httpserver.expect_request(path).respond_with_data("", status=500)
+    httpserver.expect_request(path).respond_with_data("", status=500)
+    httpserver.expect_request(path).respond_with_data("success after retry")
+
+    with _MockLoopTime() as mocked_time:
+        async with Fetcher(config) as fetcher:
+            task = asyncio.create_task(fetcher.fetch(url))
+            pending = await wait_until_blocked(task)
+            assert len(pending) == 1  # First attempt is blocked due to failure
+
+            mocked_time.current_time += 1  # After first failure
+            pending = await wait_until_blocked(task)
+            assert len(pending) == 1  # Second attempt is blocked due to failure
+
+            mocked_time.current_time += 1  # After second failure
+            pending = await wait_until_blocked(task)
+            assert len(pending) == 0  # Third attempt succeeds
 
 
 # @pytest.mark.asyncio
@@ -267,116 +296,6 @@ async def test_fetcher_cached_requests(httpserver: HTTPServer) -> None:
 #         mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep,
 #         aioresponses() as mocked,
 #     ):
-#         mocked.get(url, status=500, repeat=True)  # pyright: ignore[reportUnknownMemberType]
-
-#         async with Fetcher(config) as fetcher:
-#             with pytest.raises(ClientResponseError):
-#                 await fetcher.fetch(url)
-
-#     # retry_attempts=2 -> 1 delay
-#     assert mock_sleep.call_count == 1
-#     mock_sleep.assert_called_with(1.0)
-
-
-# @pytest.mark.asyncio
-# async def test_fetcher_retry_on_http_error() -> None:
-#     """Test that HTTP errors trigger retry attempts.
-
-#     Expects the fetcher to retry 3 times before giving up on a 500 error.
-#     Also verifies that retry delays are properly applied.
-#     """
-#     url = "http://example.com/error"
-#     config = FetcherConfig(retry_attempts=3, retry_delay=1.0)
-
-#     with (
-#         mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep,
-#         aioresponses() as mocked,
-#     ):
-#         # Mock failed responses
-#         mocked.get(url, status=500, repeat=True)  # pyright: ignore[reportUnknownMemberType]
-
-#         async with Fetcher(config) as fetcher:
-#             with pytest.raises(ClientResponseError):
-#                 await fetcher.fetch(url)
-
-#     # retry_attempts=3 -> 2 delays
-#     assert mock_sleep.call_count == 2
-#     mock_sleep.assert_called_with(1.0)
-
-
-# @pytest.mark.asyncio
-# async def test_fetcher_retry_then_success() -> None:
-#     """Test that retry succeeds after initial failures.
-
-#     Expects the fetcher to retry and eventually succeed.
-#     Also verifies timing for retry attempts.
-#     """
-#     url = "http://example.com/retry"
-#     config = FetcherConfig(retry_attempts=3, retry_delay=1.0)
-
-#     with (
-#         mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep,
-#         aioresponses() as mocked,
-#     ):
-#         # Mock 2 failed responses, then a successful one
-#         mocked.get(url, status=500)  # pyright: ignore[reportUnknownMemberType]
-#         mocked.get(url, status=500)  # pyright: ignore[reportUnknownMemberType]
-#         mocked.get(url, status=200, body="success after retries")  # pyright: ignore[reportUnknownMemberType]
-
-#         async with Fetcher(config) as fetcher:
-#             content = await fetcher.fetch(url)
-
-#             assert content == "success after retries"
-
-#     # 2 retries -> 2 delays
-#     assert mock_sleep.call_count == 2
-#     mock_sleep.assert_called_with(1.0)
-
-
-# @pytest.mark.asyncio
-# async def test_fetcher_retry_on_connection_error() -> None:
-#     """Test that connection errors trigger retry attempts.
-
-#     Expects the fetcher to retry on network failures.
-#     Also verifies retry timing for connection errors.
-#     """
-#     url = "http://example.com/connection-error"
-#     config = FetcherConfig(retry_attempts=2, retry_delay=1.0)
-
-#     with (
-#         mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep,
-#         aioresponses() as mocked,
-#     ):
-#         # Mock connection errors
-#         mocked.get(url, exception=ClientError("Connection failed"))  # pyright: ignore[reportUnknownMemberType]
-#         mocked.get(url, exception=ClientError("Connection failed"))  # pyright: ignore[reportUnknownMemberType]
-#         mocked.get(url, status=200, body="success after connection retry")  # pyright: ignore[reportUnknownMemberType]
-
-#         async with Fetcher(config) as fetcher:
-#             content = await fetcher.fetch(url)
-
-#             assert content == "success after connection retry"
-
-#     # 2 retries -> 2 delays
-#     assert mock_sleep.call_count == 2
-#     mock_sleep.assert_called_with(1.0)
-
-
-# @pytest.mark.asyncio
-# async def test_fetcher_retry_exhausted() -> None:
-#     """Test that retry attempts are exhausted and final error is raised.
-
-#     Expects the fetcher to fail after all retry attempts are used.
-#     Also verifies that all retry delays are properly applied.
-#     """
-#     url = "http://example.com/always-fail"
-#     config = FetcherConfig(retry_attempts=2, retry_delay=1.0)
-
-#     with (
-#         mock.patch("asyncio.sleep", new_callable=mock.AsyncMock) as mock_sleep,
-#         aioresponses() as mocked,
-#     ):
-#         # Mock persistent failures
 #         mocked.get(url, status=500, repeat=True)  # pyright: ignore[reportUnknownMemberType]
 
 #         async with Fetcher(config) as fetcher:
