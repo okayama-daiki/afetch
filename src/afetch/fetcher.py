@@ -99,8 +99,7 @@ class Fetcher:
         if not self._session or not self._client:
             msg = "Fetcher must be used as async context manager"
             raise RuntimeError(msg)
-        tasks = [self.fetch(url) for url in urls]
-        return await asyncio.gather(*tasks)
+        return await asyncio.gather(self.fetch(url) for url in urls)
 
     async def __aenter__(self) -> t.Self:
         """Enter the async context manager.
