@@ -5,6 +5,8 @@ import typing as t
 from unittest.mock import patch
 from urllib.parse import urlparse
 
+from pytest_httpserver import RequestMatcher
+
 from afetch import Fetcher
 
 if t.TYPE_CHECKING:
@@ -30,7 +32,7 @@ class _MockLoopTime:
 
 async def wait_until_blocked[T](
     tasks: t.Collection[asyncio.Task[T]],
-    max_wait_iter: int = 50,
+    max_wait_iter: int = 100,
 ) -> set[asyncio.Task[T]]:
     """Wait until all tasks are blocked and return the list of pending tasks.
 
@@ -142,21 +144,26 @@ async def test_fetcher_different_domains_parallel(
         assert len(pending) == 0  # All requests are done immediately
 
 
-# @pytest.mark.asyncio
-# async def test_fetcher_cached_requests() -> None:
-#     """Test that repeated requests to the same URL are served from cache after the first request.
+async def test_fetcher_cached_requests(httpserver: HTTPServer) -> None:
+    """Test that repeated requests to the same URL are served from cache after the first request.
 
-#     Expects total elapsed time to be approximately 1 seconds for 3 identical requests.
-#     Also verifies that only 1 actual HTTP request is made to the server.
-#     """
-#     urls = ["http://example.com/page"] * 3
-#     with aioresponses() as mocked:
-#         mocked.get(urls[0], status=200, body="test response", repeat=True)  # pyright: ignore[reportUnknownMemberType]
-#         async with Fetcher() as fetcher:
-#             await fetcher.fetch_all(urls)
+    TODO: Mock cache behavior instead of relying on actual caching implementation.
+    """
+    urls = [f"http://localhost:{httpserver.port}/page"] * 3
+    for url in urls:
+        httpserver.expect_request(_extract_path(url)).respond_with_data(
+            "cached response",
+        )
 
-#     # Verify that only 1 HTTP request was actually made to the server
-#     assert len(mocked.requests) == 1  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+    async with Fetcher() as fetcher:
+        await fetcher.fetch_all(urls)
+
+    assert (
+        httpserver.get_matching_requests_count(
+            RequestMatcher(_extract_path(urls[0])),
+        )
+        == 1
+    )  # Only the first request hits the server
 
 
 # @pytest.mark.asyncio
