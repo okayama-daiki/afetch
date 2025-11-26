@@ -1,6 +1,6 @@
 [project]
 name = "afetch"
-version = "0.1.0"
+version = "0.2.0"
 description = "A simple asynchronous HTTP client with just the essentials."
 readme = "README.md"
 authors = [{ name = "Daiki Okayama", email = "lawliet.d.k.m@gmail.com" }]
