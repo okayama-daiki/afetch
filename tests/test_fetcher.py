@@ -1,5 +1,7 @@
 """Tests for the afetch Fetcher class."""
 
+from __future__ import annotations
+
 import asyncio
 import typing as t
 from unittest.mock import patch
