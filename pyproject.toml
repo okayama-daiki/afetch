@@ -3,15 +3,44 @@ name = "afetch"
 version = "0.1.0"
 description = "A simple asynchronous HTTP client with just the essentials."
 readme = "README.md"
-authors = [
-    { name = "Daiki Okayama", email = "lawliet.d.k.m@gmail.com" }
-]
+authors = [{ name = "Daiki Okayama", email = "lawliet.d.k.m@gmail.com" }]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "aiohttp>=3.13.2",
+    "aiohttp-client-cache[filesystem]>=0.14.2",
+    "aiohttp-retry>=2.9.1",
+    "aiolimiter>=1.2.1",
+]
 
 [project.scripts]
-afetch = "afetch:main"
 
 [build-system]
 requires = ["uv_build>=0.8.14,<0.9.0"]
 build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "aioresponses>=0.7.8",
+    "basedpyright>=1.34.0",
+    "pytest>=9.0.1",
+    "pytest-asyncio>=1.3.0",
+    "pytest-httpserver>=1.1.3",
+    "ruff>=0.14.6",
+]
+
+[tool.ruff]
+lint.select = ["ALL"]
+lint.ignore = [
+    "E501", # Line too long
+    "S101", # Use of assert detected: Pytest handles assertions in tests
+    "D203", # Insert 1 blank line before class docstring (prefer D211)
+    "D213",
+]
+
+[tool.basedpyright]
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest]
+asyncio_mode = "auto"
