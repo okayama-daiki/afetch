@@ -42,8 +42,9 @@ class Fetcher:
         self.config = config or FetcherConfig()
         self._cache_backend = self.config.cache_backend or FileBackend(
             cache_name=".afetch_cache",
-            use_cache=self.config.cache_enabled,
         )
+        if not self.config.cache_enabled:
+            self._cache_backend.expire_after = 0
         self._limiters: dict[str, aiolimiter.AsyncLimiter] = collections.defaultdict(
             lambda: aiolimiter.AsyncLimiter(
                 max_rate=self.config.max_rate_per_domain,
