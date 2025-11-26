@@ -15,7 +15,6 @@ class FetcherConfig:
         max_rate_per_domain: Maximum requests per domain per time period.
         time_period_per_domain: Time period in seconds for rate limiting.
         retry_attempts: Number of retry attempts for failed requests.
-        retry_delay: Base delay in seconds between retry attempts.
         cache_backend: Cache backend instance for storing cached responses.
         cache_enabled: Whether caching is enabled, default is True.
 
@@ -24,6 +23,5 @@ class FetcherConfig:
     max_rate_per_domain: int = 1
     time_period_per_domain: float = 1
     retry_attempts: int = 3
-    retry_delay: float = 1.0
     cache_backend: CacheBackend | None = None
     cache_enabled: bool = True
