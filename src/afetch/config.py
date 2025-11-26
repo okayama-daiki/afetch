@@ -8,8 +8,8 @@ class FetcherConfig:
     """Configuration for afetch.
 
     Attributes:
-        rate_limit_per_domain: Maximum requests per domain per time period.
-        rate_limit_period: Time period in seconds for rate limiting.
+        max_rate_per_domain: Maximum requests per domain per time period.
+        time_period_per_domain: Time period in seconds for rate limiting.
         retry_attempts: Number of retry attempts for failed requests.
         retry_delay: Base delay in seconds between retry attempts.
         cache_enabled: Whether to enable response caching.
