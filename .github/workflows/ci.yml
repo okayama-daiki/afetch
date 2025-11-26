@@ -48,6 +48,8 @@ jobs:
         strategy:
             matrix:
                 python-version: ["3.14"]
+        permissions:
+            id-token: write
 
         steps:
             - uses: actions/checkout@v6
@@ -61,5 +63,13 @@ jobs:
             - name: Install the project
               run: uv sync --locked --all-extras --dev
 
-            - name: Run tests
-              run: uv run pytest -v
+            - name: Run tests with coverage
+              run: uv run pytest -v --cov=afetch --cov-report=xml
+
+            - name: Upload coverage to Codecov
+              uses: codecov/codecov-action@v5
+              if: ${{ matrix.python-version == '3.14' && github.ref == 'refs/heads/main' }}
+              with:
+                  files: ./coverage.xml
+                  fail_ci_if_error: false
+                  use_oicd: true
