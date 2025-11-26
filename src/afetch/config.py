@@ -1,6 +1,10 @@
 """Configuration settings for afetch."""
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from aiohttp_client_cache.backends.base import CacheBackend
 
 
 @dataclass
@@ -13,6 +17,7 @@ class FetcherConfig:
         retry_attempts: Number of retry attempts for failed requests.
         retry_delay: Base delay in seconds between retry attempts.
         cache_enabled: Whether to enable response caching.
+        cache_backend: Cache backend instance for storing cached responses.
 
     """
 
@@ -21,3 +26,4 @@ class FetcherConfig:
     retry_attempts: int = 3
     retry_delay: float = 1.0
     cache_enabled: bool = True
+    cache_backend: CacheBackend | None = None

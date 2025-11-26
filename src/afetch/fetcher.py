@@ -2,11 +2,13 @@
 
 import asyncio
 import collections
+import http
 import typing as t
 import urllib.parse as parser
 
 import aiohttp_retry
 import aiolimiter
+from aiohttp_client_cache import FileBackend
 from aiohttp_client_cache.session import CachedSession
 from yarl import URL
 
@@ -38,6 +40,10 @@ class Fetcher:
 
         """
         self.config = config or FetcherConfig()
+        self._cache_backend = self.config.cache_backend or FileBackend(
+            cache_name=".afetch_cache",
+            use_cache=self.config.cache_enabled,
+        )
         self._limiters: dict[str, aiolimiter.AsyncLimiter] = collections.defaultdict(
             lambda: aiolimiter.AsyncLimiter(
                 max_rate=self.config.max_rate_per_domain,
@@ -61,13 +67,18 @@ class Fetcher:
 
         Raises:
             RuntimeError: If called outside of an async context manager.
+            aiohttp.client_exceptions.InvalidUrlClientError: If the URL is invalid.
 
         """
         if not self._session or not self._client:
             msg = "Fetcher must be used as async context manager"
             raise RuntimeError(msg)
 
-        domain = url.host if isinstance(url, URL) else parser.urlparse(url).netloc
+        domain = (
+            url.host_port_subcomponent
+            if isinstance(url, URL)
+            else parser.urlparse(url).netloc
+        )
         if domain is None:
             msg = f"Invalid URL: {url}"
             raise ValueError(msg)
@@ -78,9 +89,11 @@ class Fetcher:
                 pass
 
         async with self._client.get(url) as response:
+            if response.status != http.HTTPStatus.OK:
+                response.raise_for_status()
             return await response.text()
 
-    async def fetch_all(self, urls: t.Iterable[str]) -> list[str]:
+    async def fetch_all(self, urls: t.Iterable[str | URL]) -> list[str]:
         """Fetch content from multiple URLs concurrently.
 
         This method creates concurrent tasks for each URL while still respecting
@@ -114,7 +127,7 @@ class Fetcher:
             Fetcher: The fetcher instance for use in async with statement.
 
         """
-        self._session = CachedSession()
+        self._session = CachedSession(cache=self._cache_backend)
         retry_options = aiohttp_retry.ExponentialRetry(
             attempts=self.config.retry_attempts,
         )
