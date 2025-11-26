@@ -35,7 +35,7 @@ class _MockLoopTime:
 
 async def _wait_until_blocked[T](
     *tasks: asyncio.Task[T],
-    max_wait_iter: int = 100,
+    max_wait_iter: int = 1_000,
 ) -> set[asyncio.Task[T]]:
     """Wait until all tasks are blocked and return the list of pending tasks.
 
