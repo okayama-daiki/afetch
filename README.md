@@ -12,7 +12,6 @@ A simple asynchronous HTTP client with just the essentials.
 - **Automatic Retries** - Built-in exponential backoff retry mechanism for failed requests
 - **Response Caching** - Cache responses to reduce redundant network calls
 - **Concurrent Fetching** - Fetch multiple URLs in parallel with `fetch_all()`
-- **Async Context Manager** - Clean resource management with `async with` syntax
 
 ## Installation
 
