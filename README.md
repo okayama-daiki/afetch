@@ -111,6 +111,15 @@ uv run pytest -v
 uv run ruff check .
 ```
 
+## Acknowledgments
+
+This project is built on top of these excellent libraries:
+
+- [aiohttp](https://github.com/aio-libs/aiohttp) - Async HTTP client/server framework
+- [aiohttp-client-cache](https://github.com/requests-cache/aiohttp-client-cache) - Async HTTP cache backend
+- [aiohttp-retry](https://github.com/inyutin/aiohttp_retry) - Retry functionality for aiohttp
+- [aiolimiter](https://github.com/mjpieters/aiolimiter) - Async rate limiter
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
