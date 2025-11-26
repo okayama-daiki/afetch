@@ -107,7 +107,6 @@ def url_error_after_success(httpserver: HTTPServer) -> URL:
         "error response",
         status=500,
     )
-    url = URL(f"http://localhost:{httpserver.port}/error")
     httpserver.expect_request(url.path).respond_with_data(
         "error response",
         status=500,
