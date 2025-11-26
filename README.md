@@ -14,10 +14,10 @@ A simple asynchronous HTTP client with just the essentials.
 >>> async with Fetcher() as fetcher:
 ...     responses = await fetcher.fetch_all(urls)
 >>> for response in responses:
-...     print(response.status_code, response.url)
-200 https://example.com/xxx
-200 https://example.com/yyy
-200 https://example2.com
+...     print(response)
+<html>...</html>
+<html>...</html>
+<html>...</html>
 ```
 
 ## For Developers
