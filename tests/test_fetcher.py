@@ -33,11 +33,11 @@ class _MockLoopTime:
         self.patch.stop()
 
 
-async def _wait_until_blocked[T](
+async def _wait_for_tasks_completion[T](
     *tasks: asyncio.Task[T],
     max_wait_iter: int = 1_000,
 ) -> set[asyncio.Task[T]]:
-    """Wait until all tasks are blocked and return the list of pending tasks.
+    """Wait a bit for tasks to complete and return the pending ones.
 
     Increasing `max_wait_iter` reduces flakiness in CI environments, but it may also slow down tests.
     TODO: Replace with more robust synchronization mechanism if needed.
@@ -78,32 +78,32 @@ async def test_fetcher_same_domain_rate_limiting(
         tasks = [asyncio.Task(fetcher.fetch(url)) for url in urls_same_domain]
         expected_done_tasks = 0
 
-        pending = await _wait_until_blocked(*tasks)
+        pending = await _wait_for_tasks_completion(*tasks)
         expected_done_tasks += 1
         assert (
             len(tasks) - len(pending) == expected_done_tasks
         )  # First request is done immediately
 
-        pending = await _wait_until_blocked(*pending)
+        pending = await _wait_for_tasks_completion(*pending)
         assert (
             len(tasks) - len(pending) == expected_done_tasks
         )  # Second request waits due to rate limiting
 
         mocked_time.current_time += 1
         expected_done_tasks += 1
-        pending = await _wait_until_blocked(*pending)
+        pending = await _wait_for_tasks_completion(*pending)
         assert (
             len(tasks) - len(pending) == expected_done_tasks
         )  # Second request is done
 
-        pending = await _wait_until_blocked(*pending)
+        pending = await _wait_for_tasks_completion(*pending)
         assert (
             len(tasks) - len(pending) == expected_done_tasks
         )  # Third request waits due to rate limiting
 
         mocked_time.current_time += 1
         expected_done_tasks += 1
-        pending = await _wait_until_blocked(*pending)
+        pending = await _wait_for_tasks_completion(*pending)
         assert len(tasks) - len(pending) == expected_done_tasks  # Third request is done
 
 
@@ -114,7 +114,7 @@ async def test_fetcher_different_domains_parallel(
     """Test that requests to different domains are executed in parallel."""
     tasks = [asyncio.Task(fetcher.fetch(url)) for url in urls_different_domains]
 
-    pending = await _wait_until_blocked(*tasks)
+    pending = await _wait_for_tasks_completion(*tasks)
     assert len(pending) == 0  # All requests are done immediately
 
 
@@ -147,17 +147,17 @@ async def test_fetcher_retry_then_success(
     """
     with _MockLoopTime() as mocked_time:
         task = asyncio.create_task(fetcher_retry_twice.fetch(url_error_after_success))
-        pending = await _wait_until_blocked(task)
+        pending = await _wait_for_tasks_completion(task)
         assert len(pending) == 1  # First attempt is blocked due to failure
 
-        pending = await _wait_until_blocked(task)
+        pending = await _wait_for_tasks_completion(task)
         assert len(pending) == 1  # Second attempt is blocked due to failure
 
-        pending = await _wait_until_blocked(task)
+        pending = await _wait_for_tasks_completion(task)
         assert len(pending) == 1  # Delay before third attempt
 
         mocked_time.current_time += 1
-        pending = await _wait_until_blocked(task)
+        pending = await _wait_for_tasks_completion(task)
         assert len(pending) == 0  # Third attempt should succeed
 
 
@@ -191,15 +191,15 @@ async def test_fetcher_fetch_all_same_domain(
     with _MockLoopTime() as mocked_time:
         task = asyncio.create_task(fetcher.fetch_all(urls_same_domain))
 
-        await _wait_until_blocked(task)
+        await _wait_for_tasks_completion(task)
         assert not task.done()  # First request is done immediately
 
         mocked_time.current_time += 1
-        await _wait_until_blocked(task)
+        await _wait_for_tasks_completion(task)
         assert not task.done()  # Second request may be done, Third is may be pending
 
         mocked_time.current_time += 1
-        await _wait_until_blocked(task)
+        await _wait_for_tasks_completion(task)
         assert task.done()  # All requests should be done
 
 
