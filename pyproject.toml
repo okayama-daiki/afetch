@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A simple asynchronous HTTP client with just the essentials."
 readme = "README.md"
 authors = [{ name = "Daiki Okayama", email = "lawliet.d.k.m@gmail.com" }]
-classsifiers = [
+classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
