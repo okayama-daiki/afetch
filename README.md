@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/okayama-daiki/afetch/actions/workflows/ci.yml/badge.svg)](https://github.com/okayama-daiki/afetch/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/okayama-daiki/afetch/graph/badge.svg)](https://codecov.io/gh/okayama-daiki/afetch)
-[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PyPI Version](https://img.shields.io/pypi/v/afetch.svg)](https://pypi.python.org/pypi/afetch)
+[![Supported Python Versions](https://img.shields.io/pypi/pyversions/afetch.svg)](https://pypi.python.org/pypi/afetch)
+[![License](https://img.shields.io/pypi/l/afetch.svg)](https://pypi.python.org/pypi/afetch)
 
 A simple asynchronous HTTP client with just the essentials.
 

@@ -1,5 +1,7 @@
 """Common test fixtures for the afetch project."""
 
+from __future__ import annotations
+
 import typing as t
 
 import pytest
@@ -11,7 +13,7 @@ from afetch import Fetcher, FetcherConfig
 
 
 @pytest.fixture
-def httpserver2() -> t.Generator[HTTPServer]:
+def httpserver2() -> t.Generator[HTTPServer, None, None]:
     """Test fixture providing a second local HTTP server for parallel testing."""
     server = HTTPServer(host="127.0.0.1", port=0)
     server.start()
@@ -20,7 +22,7 @@ def httpserver2() -> t.Generator[HTTPServer]:
 
 
 @pytest.fixture
-def httpserver3() -> t.Generator[HTTPServer]:
+def httpserver3() -> t.Generator[HTTPServer, None, None]:
     """Test fixture providing a third local HTTP server for parallel testing."""
     server = HTTPServer(host="127.0.0.1", port=0)
     server.start()
@@ -29,7 +31,7 @@ def httpserver3() -> t.Generator[HTTPServer]:
 
 
 @pytest.fixture
-async def fetcher() -> t.AsyncGenerator[Fetcher]:
+async def fetcher() -> t.AsyncGenerator[Fetcher, None]:
     """Test fixture providing a default instance of Fetcher."""
     config = FetcherConfig(cache_backend=CacheBackend())
     async with Fetcher(config) as fetcher:
@@ -37,7 +39,7 @@ async def fetcher() -> t.AsyncGenerator[Fetcher]:
 
 
 @pytest.fixture
-async def fetcher_retry_twice() -> t.AsyncGenerator[Fetcher]:
+async def fetcher_retry_twice() -> t.AsyncGenerator[Fetcher, None]:
     """Test fixture providing an instance of Fetcher with 2 retry attempts."""
     config = FetcherConfig(
         cache_backend=CacheBackend(),
