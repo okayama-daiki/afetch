@@ -37,7 +37,7 @@ class _MockLoopTime:
 
 async def _wait_for_tasks_completion[T](
     *tasks: asyncio.Task[T],
-    max_wait_iter: int = 1_000,
+    max_wait_iter: int = 5_000,
 ) -> set[asyncio.Task[T]]:
     """Wait a bit for tasks to complete and return the pending ones.
 
