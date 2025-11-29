@@ -409,10 +409,15 @@ class Fetcher:
         Args:
             urls: An iterable of URLs to fetch content from.
             options: Optional request options to apply to all requests.
+                When None, uses legacy fetch() behavior returning text strings.
+                When provided, uses request() with the specified options.
 
         Returns:
             list: A list of responses in the same order as input URLs.
-                  If return_exceptions is True, exceptions are included in the list.
+                  When options is None: list of text strings (str).
+                  When options is provided: list of ResponseResult based on response_type.
+                  If return_exceptions is True, exceptions are included in the list
+                  instead of being raised.
 
         Raises:
             RuntimeError: If called outside of an async context manager.
@@ -423,9 +428,11 @@ class Fetcher:
             raise RuntimeError(msg)
 
         if options is None:
-            # Use legacy behavior for backwards compatibility
+            # Use legacy behavior for backwards compatibility - returns list[str]
+            # Since str is part of ResponseResult union, this is type-safe
             tasks = [self.fetch(url) for url in urls]
-            return t.cast("list[ResponseResult | BaseException]", await asyncio.gather(*tasks))
+            results: list[str] = await asyncio.gather(*tasks)
+            return results  # type: ignore[return-value]
 
         tasks = [self.request(url, options) for url in urls]
         return await asyncio.gather(*tasks, return_exceptions=self.config.return_exceptions)  # pyright: ignore[reportReturnType]
