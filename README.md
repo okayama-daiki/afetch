@@ -45,8 +45,8 @@ async def main():
         "https://example.com/page2",
         "https://example2.com",
     ]
-    async with Fetcher() as fetcher:
-        responses = await fetcher.fetch_all(urls)
+    # Simple one-liner for parallel fetching
+    responses = await Fetcher.run(urls)
     for response in responses:
         print(response)
 
@@ -54,6 +54,15 @@ asyncio.run(main())
 ```
 
 ## Usage
+
+### Simple Parallel Fetching
+
+The simplest way to fetch multiple URLs in parallel:
+
+```python
+# One-liner without context manager
+results = await Fetcher.run(["https://example.com/a", "https://example.com/b"])
+```
 
 ### Fetching a Single URL
 

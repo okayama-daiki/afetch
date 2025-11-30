@@ -389,3 +389,53 @@ class TestQueryParams:
         result = await fetcher_with_headers.request(url, options)
 
         assert result == "params ok"
+
+
+class TestRunClassMethod:
+    """Tests for the Fetcher.run() class method."""
+
+    async def test_run_parallel_fetch(
+        self,
+        httpserver: HTTPServer,
+    ) -> None:
+        """Test simple parallel fetching with Fetcher.run()."""
+        url1 = URL(f"http://localhost:{httpserver.port}/run1")
+        url2 = URL(f"http://localhost:{httpserver.port}/run2")
+
+        httpserver.expect_request(url1.path).respond_with_data("result1")
+        httpserver.expect_request(url2.path).respond_with_data("result2")
+
+        results = await Fetcher.run([url1, url2])
+
+        expected_len = 2
+        assert len(results) == expected_len
+        assert results[0] == "result1"
+        assert results[1] == "result2"
+
+    async def test_run_with_config(
+        self,
+        httpserver: HTTPServer,
+    ) -> None:
+        """Test Fetcher.run() with custom config."""
+        url = URL(f"http://localhost:{httpserver.port}/run-config")
+        httpserver.expect_request(url.path).respond_with_data("configured")
+
+        config = FetcherConfig(cache_backend=CacheBackend())
+        results = await Fetcher.run([url], config=config)
+
+        assert len(results) == 1
+        assert results[0] == "configured"
+
+    async def test_run_with_options(
+        self,
+        httpserver: HTTPServer,
+    ) -> None:
+        """Test Fetcher.run() with request options."""
+        url = URL(f"http://localhost:{httpserver.port}/run-options")
+        httpserver.expect_request(url.path).respond_with_json({"data": "json"})
+
+        options = RequestOptions(response_type=ResponseType.JSON)
+        results = await Fetcher.run([url], options=options)
+
+        assert len(results) == 1
+        assert results[0] == {"data": "json"}

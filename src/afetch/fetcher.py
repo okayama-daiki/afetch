@@ -476,3 +476,36 @@ class Fetcher:
         """
         if self._client:
             await self._client.__aexit__(exc_type, exc_val, exc_tb)
+
+    @classmethod
+    async def run(
+        cls,
+        urls: t.Iterable[str | URL],
+        config: FetcherConfig | None = None,
+        options: RequestOptions | None = None,
+    ) -> list[ResponseResult | BaseException]:
+        """Fetch multiple URLs in parallel with automatic session management.
+
+        This is a convenience class method that handles the context manager
+        internally, making it simpler to fetch multiple URLs in one call.
+
+        Args:
+            urls: An iterable of URLs to fetch content from.
+            config: Optional configuration for the fetcher.
+            options: Optional request options to apply to all requests.
+
+        Returns:
+            list: A list of responses in the same order as input URLs.
+
+        Example:
+            ```python
+            # Simple parallel fetching without context manager
+            results = await Fetcher.run([
+                "https://example.com/1",
+                "https://example.com/2",
+            ])
+            ```
+
+        """
+        async with cls(config) as fetcher:
+            return await fetcher.fetch_all(urls, options)
