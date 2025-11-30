@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any
 
-# HTTP method type - uses string literals compatible with aiohttp
-HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+from aiohttp import hdrs
+
+# HTTP method type - reuses aiohttp's method string constants
+# Users can use aiohttp.hdrs.METH_GET, aiohttp.hdrs.METH_POST, etc. or plain strings
+HttpMethod = str
 
 
 class ResponseType(enum.Enum):
@@ -50,7 +53,7 @@ class RequestOptions:
 
     """
 
-    method: HttpMethod = "GET"
+    method: HttpMethod = hdrs.METH_GET
     headers: dict[str, str] = field(default_factory=dict)
     data: bytes | str | None = None
     json: Any | None = None
