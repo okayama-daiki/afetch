@@ -76,7 +76,7 @@ async with Fetcher() as fetcher:
 The `request()` method provides full control over HTTP requests:
 
 ```python
-from afetch import Fetcher, RequestOptions, HttpMethod, ResponseType
+from afetch import Fetcher, RequestOptions, ResponseType
 
 async with Fetcher() as fetcher:
     # GET request with JSON response
@@ -85,7 +85,7 @@ async with Fetcher() as fetcher:
     
     # POST request with JSON body
     options = RequestOptions(
-        method=HttpMethod.POST,
+        method="POST",
         json={"name": "test"},
         response_type=ResponseType.JSON,
     )

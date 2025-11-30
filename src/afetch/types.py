@@ -8,19 +8,10 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
-
-class HttpMethod(enum.Enum):
-    """HTTP methods supported by afetch."""
-
-    GET = "GET"
-    POST = "POST"
-    PUT = "PUT"
-    DELETE = "DELETE"
-    PATCH = "PATCH"
-    HEAD = "HEAD"
-    OPTIONS = "OPTIONS"
+# HTTP method type - uses string literals compatible with aiohttp
+HttpMethod = Literal["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
 
 
 class ResponseType(enum.Enum):
@@ -59,7 +50,7 @@ class RequestOptions:
 
     """
 
-    method: HttpMethod = HttpMethod.GET
+    method: HttpMethod = "GET"
     headers: dict[str, str] = field(default_factory=dict)
     data: bytes | str | None = None
     json: Any | None = None

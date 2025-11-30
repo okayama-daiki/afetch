@@ -12,7 +12,6 @@ from yarl import URL
 from afetch import (
     Fetcher,
     FetcherConfig,
-    HttpMethod,
     RequestOptions,
     ResponseError,
     ResponseType,
@@ -121,7 +120,7 @@ class TestRequestMethod:
         post_url: URL,
     ) -> None:
         """Test POST request."""
-        options = RequestOptions(method=HttpMethod.POST)
+        options = RequestOptions(method="POST")
         result = await fetcher_with_headers.request(post_url, options)
         assert result == "post received"
 
@@ -138,7 +137,7 @@ class TestRequestMethod:
         ).respond_with_json({"status": "ok"})
 
         options = RequestOptions(
-            method=HttpMethod.POST,
+            method="POST",
             json={"name": "test"},
             response_type=ResponseType.JSON,
         )
@@ -343,7 +342,7 @@ class TestHttpMethods:
         url = URL(f"http://localhost:{httpserver.port}/put")
         httpserver.expect_request(url.path, method="PUT").respond_with_data("put ok")
 
-        options = RequestOptions(method=HttpMethod.PUT)
+        options = RequestOptions(method="PUT")
         result = await fetcher_with_headers.request(url, options)
         assert result == "put ok"
 
@@ -356,7 +355,7 @@ class TestHttpMethods:
         url = URL(f"http://localhost:{httpserver.port}/delete")
         httpserver.expect_request(url.path, method="DELETE").respond_with_data("deleted")
 
-        options = RequestOptions(method=HttpMethod.DELETE)
+        options = RequestOptions(method="DELETE")
         result = await fetcher_with_headers.request(url, options)
         assert result == "deleted"
 
@@ -369,7 +368,7 @@ class TestHttpMethods:
         url = URL(f"http://localhost:{httpserver.port}/patch")
         httpserver.expect_request(url.path, method="PATCH").respond_with_data("patched")
 
-        options = RequestOptions(method=HttpMethod.PATCH)
+        options = RequestOptions(method="PATCH")
         result = await fetcher_with_headers.request(url, options)
         assert result == "patched"
 

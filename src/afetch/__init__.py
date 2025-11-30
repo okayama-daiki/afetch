@@ -10,7 +10,7 @@ from .errors import (
     RetryExhaustedError,
 )
 from .fetcher import Fetcher
-from .types import HttpMethod, RequestOptions, ResponseType
+from .types import RequestOptions, ResponseType
 
 __all__ = [
     "CacheError",
@@ -18,7 +18,6 @@ __all__ = [
     "FetcherConfig",
     "FetcherError",
     "FetcherTimeoutError",
-    "HttpMethod",
     "RequestError",
     "RequestOptions",
     "ResponseError",

@@ -23,7 +23,7 @@ from .errors import (
     RequestError,
     ResponseError,
 )
-from .types import HttpMethod, RequestOptions, ResponseType
+from .types import RequestOptions, ResponseType
 
 if t.TYPE_CHECKING:
     from types import TracebackType
@@ -208,12 +208,12 @@ class Fetcher:
 
     def _get_request_method(
         self,
-        method: HttpMethod,
+        method: str,
     ) -> t.Callable[..., t.Any]:
         """Get the appropriate request method from the client.
 
         Args:
-            method: HTTP method enum.
+            method: HTTP method string (GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS).
 
         Returns:
             The corresponding client method.
@@ -221,15 +221,15 @@ class Fetcher:
         """
         assert self._client is not None
         method_map = {
-            HttpMethod.GET: self._client.get,
-            HttpMethod.POST: self._client.post,
-            HttpMethod.PUT: self._client.put,
-            HttpMethod.DELETE: self._client.delete,
-            HttpMethod.PATCH: self._client.patch,
-            HttpMethod.HEAD: self._client.head,
-            HttpMethod.OPTIONS: self._client.options,
+            "GET": self._client.get,
+            "POST": self._client.post,
+            "PUT": self._client.put,
+            "DELETE": self._client.delete,
+            "PATCH": self._client.patch,
+            "HEAD": self._client.head,
+            "OPTIONS": self._client.options,
         }
-        return method_map[method]
+        return method_map[method.upper()]
 
     async def _apply_rate_limit(
         self,
@@ -287,7 +287,7 @@ class Fetcher:
         url_str = str(url)
         domain = self._get_domain(url)
 
-        self._logger.debug("Starting request: %s %s", options.method.value, url_str)
+        self._logger.debug("Starting request: %s %s", options.method, url_str)
         await self._apply_rate_limit(url, url_str, domain)
 
         kwargs = self._build_request_kwargs(options)
@@ -304,19 +304,19 @@ class Fetcher:
         except FetcherError:
             raise
         except TimeoutError as e:
-            self._logger.warning("Request timeout: %s %s", options.method.value, url_str)
+            self._logger.warning("Request timeout: %s %s", options.method, url_str)
             msg = f"Request timed out: {url_str}"
             raise FetcherTimeoutError(msg, cause=e, url=url_str) from e
         except aiohttp.ClientResponseError as e:
-            self._logger.warning("Response error: %s %s -> %d", options.method.value, url_str, e.status)
+            self._logger.warning("Response error: %s %s -> %d", options.method, url_str, e.status)
             msg = f"HTTP error {e.status}: {e.message}"
             raise ResponseError(msg, cause=e, url=url_str, status=e.status) from e
         except aiohttp.ClientError as e:
-            self._logger.warning("Request error: %s %s -> %s", options.method.value, url_str, e)
+            self._logger.warning("Request error: %s %s -> %s", options.method, url_str, e)
             msg = f"Request failed: {e}"
             raise RequestError(msg, cause=e, url=url_str) from e
         except Exception as e:
-            self._logger.warning("Unexpected error: %s %s -> %s", options.method.value, url_str, e)
+            self._logger.warning("Unexpected error: %s %s -> %s", options.method, url_str, e)
             msg = f"Unexpected error during request: {e}"
             raise RequestError(msg, cause=e, url=url_str) from e
 
@@ -343,11 +343,11 @@ class Fetcher:
         """
         async with request_method(url, **kwargs) as response:
             # Check for non-OK status (HEAD requests with <400 are acceptable)
-            is_head_ok = options.method == HttpMethod.HEAD and response.status < 400  # noqa: PLR2004
+            is_head_ok = options.method == "HEAD" and response.status < 400  # noqa: PLR2004
             if response.status != http.HTTPStatus.OK and not is_head_ok:
                 self._logger.warning(
                     "Non-OK response: %s %s -> %d",
-                    options.method.value,
+                    options.method,
                     url_str,
                     response.status,
                 )
@@ -355,7 +355,7 @@ class Fetcher:
 
             self._logger.debug(
                 "Request completed: %s %s -> %d",
-                options.method.value,
+                options.method,
                 url_str,
                 response.status,
             )
