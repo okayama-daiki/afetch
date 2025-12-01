@@ -12,6 +12,7 @@ from yarl import URL
 from afetch import (
     Fetcher,
     FetcherConfig,
+    Request,
     RequestOptions,
     ResponseError,
     ResponseType,
@@ -439,3 +440,56 @@ class TestRunClassMethod:
 
         assert len(results) == 1
         assert results[0] == {"data": "json"}
+
+
+class TestRunRequestsClassMethod:
+    """Tests for the Fetcher.run_requests() class method."""
+
+    async def test_run_requests_with_different_options(
+        self,
+        httpserver: HTTPServer,
+    ) -> None:
+        """Test parallel requests with different options per request."""
+        url1 = URL(f"http://localhost:{httpserver.port}/json-endpoint")
+        url2 = URL(f"http://localhost:{httpserver.port}/text-endpoint")
+        url3 = URL(f"http://localhost:{httpserver.port}/post-endpoint")
+
+        httpserver.expect_request(url1.path).respond_with_json({"id": 1})
+        httpserver.expect_request(url2.path).respond_with_data("text content")
+        httpserver.expect_request(url3.path, method="POST").respond_with_data("posted")
+
+        requests = [
+            Request(url1, RequestOptions(response_type=ResponseType.JSON)),
+            Request(url2, RequestOptions(response_type=ResponseType.TEXT)),
+            Request(url3, RequestOptions(method="POST")),
+        ]
+        results = await Fetcher.run_requests(requests)
+
+        expected_len = 3
+        assert len(results) == expected_len
+        assert results[0] == {"id": 1}
+        assert results[1] == "text content"
+        assert results[2] == "posted"
+
+    async def test_run_requests_with_default_options(
+        self,
+        httpserver: HTTPServer,
+    ) -> None:
+        """Test run_requests with some requests using default options."""
+        url1 = URL(f"http://localhost:{httpserver.port}/default1")
+        url2 = URL(f"http://localhost:{httpserver.port}/default2")
+
+        httpserver.expect_request(url1.path).respond_with_data("result1")
+        httpserver.expect_request(url2.path).respond_with_data("result2")
+
+        # One with explicit options, one with defaults
+        requests = [
+            Request(url1, RequestOptions(response_type=ResponseType.TEXT)),
+            Request(url2),  # Uses default options
+        ]
+        results = await Fetcher.run_requests(requests)
+
+        expected_len = 2
+        assert len(results) == expected_len
+        assert results[0] == "result1"
+        assert results[1] == "result2"

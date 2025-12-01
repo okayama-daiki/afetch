@@ -23,7 +23,7 @@ from .errors import (
     RequestError,
     ResponseError,
 )
-from .types import RequestOptions, ResponseType
+from .types import Request, RequestOptions, ResponseType
 
 if t.TYPE_CHECKING:
     from types import TracebackType
@@ -509,3 +509,38 @@ class Fetcher:
         """
         async with cls(config) as fetcher:
             return await fetcher.fetch_all(urls, options)
+
+    @classmethod
+    async def run_requests(
+        cls,
+        requests: t.Iterable[Request],
+        config: FetcherConfig | None = None,
+    ) -> list[ResponseResult | BaseException]:
+        """Execute multiple requests in parallel with individual options per request.
+
+        This is a convenience class method that handles the context manager
+        internally and allows different options for each request.
+
+        Args:
+            requests: An iterable of Request objects, each with its own URL and options.
+            config: Optional configuration for the fetcher.
+
+        Returns:
+            list: A list of responses in the same order as input requests.
+
+        Example:
+            ```python
+            from afetch import Fetcher, Request, RequestOptions, ResponseType
+
+            requests = [
+                Request("https://api.example.com/users", RequestOptions(response_type=ResponseType.JSON)),
+                Request("https://api.example.com/data", RequestOptions(method="POST", json={"key": "value"})),
+                Request("https://example.com/page"),  # Uses default GET with text response
+            ]
+            results = await Fetcher.run_requests(requests)
+            ```
+
+        """
+        async with cls(config) as fetcher:
+            tasks = [fetcher.request(req.url, req.options) for req in requests]
+            return await asyncio.gather(*tasks, return_exceptions=fetcher.config.return_exceptions)  # pyright: ignore[reportReturnType]

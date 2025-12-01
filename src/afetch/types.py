@@ -8,9 +8,12 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from aiohttp import hdrs
+
+if TYPE_CHECKING:
+    from yarl import URL
 
 # HTTP method type - reuses aiohttp's method string constants
 # Users can use aiohttp.hdrs.METH_GET, aiohttp.hdrs.METH_POST, etc. or plain strings
@@ -61,3 +64,29 @@ class RequestOptions:
     timeout: float | None = None
     response_type: ResponseType = ResponseType.TEXT
     allow_redirects: bool = True
+
+
+@dataclass
+class Request:
+    """A request with URL and optional per-request options.
+
+    This allows bundling a URL with its specific options for use with
+    Fetcher.run_requests() when different requests need different options.
+
+    Attributes:
+        url: The URL to fetch.
+        options: Optional request options specific to this URL.
+
+    Example:
+        ```python
+        requests = [
+            Request("https://api.example.com/users", RequestOptions(response_type=ResponseType.JSON)),
+            Request("https://api.example.com/data", RequestOptions(method="POST", json={"key": "value"})),
+        ]
+        results = await Fetcher.run_requests(requests)
+        ```
+
+    """
+
+    url: str | URL
+    options: RequestOptions | None = None

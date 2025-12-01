@@ -64,6 +64,21 @@ The simplest way to fetch multiple URLs in parallel:
 results = await Fetcher.run(["https://example.com/a", "https://example.com/b"])
 ```
 
+### Parallel Requests with Different Options
+
+When you need different options for different requests:
+
+```python
+from afetch import Fetcher, Request, RequestOptions, ResponseType
+
+requests = [
+    Request("https://api.example.com/users", RequestOptions(response_type=ResponseType.JSON)),
+    Request("https://api.example.com/data", RequestOptions(method="POST", json={"key": "value"})),
+    Request("https://example.com/page"),  # Uses default GET with text response
+]
+results = await Fetcher.run_requests(requests)
+```
+
 ### Fetching a Single URL
 
 ```python
