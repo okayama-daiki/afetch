@@ -10,6 +10,8 @@ A simple asynchronous HTTP client with just the essentials.
 
 ## Features
 
+![afetch architecture diagram](docs/architecture.drawio.png)
+
 - **Rate Limiting** - Automatically limits requests per domain to avoid overwhelming servers
 - **Automatic Retries** - Built-in exponential backoff retry mechanism for failed requests
 - **Response Caching** - Cache responses to reduce redundant network calls
